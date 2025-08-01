@@ -51,7 +51,6 @@ public class GameService {
 
         notificationService.sendMessage(PLAY_AGAIN);
 
-        //move to new game
-        playerService.promptMove();
+        playerService.waitForPlayAgain();
     }
 }

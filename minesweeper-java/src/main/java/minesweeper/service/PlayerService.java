@@ -1,40 +1,49 @@
 package minesweeper.service;
 
 import java.util.Scanner;
+import static minesweeper.constant.GameConstant.*;
 
 public class PlayerService {
 
-    private final Scanner scanner = new Scanner(System.in);
+    private final Scanner scanner;
+    private final NotificationService notificationService;
+
+    public PlayerService(Scanner scanner, NotificationService notificationService) {
+        this.scanner = scanner;
+        this.notificationService = notificationService;
+    }
 
     public int promptGridSize() {
-        int size;
         while (true) {
-            System.out.print("Enter the size of the grid (e.g. 4 for 4x4): ");
+            notificationService.sendMessageInSameLine(PROMPT_GRID_SIZE);
             String input = scanner.nextLine();
             try {
-                size = Integer.parseInt(input);
+                int size = Integer.parseInt(input);
                 if (size >= 2 && size <= 26) return size;
             } catch (Exception ignored) {}
-            System.out.println("Invalid grid size. Try again.");
+            notificationService.sendMessage(INVALID_GRID_SIZE);
         }
     }
 
     public int promptMines(int size) {
         int maxMines = (int) (size * size * 0.35);
-        int mines;
         while (true) {
-            System.out.printf("Enter number of mines (max %d): ", maxMines);
+            notificationService.sendMessageInSameLine(String.format(PROMPT_MINES, maxMines));
             String input = scanner.nextLine();
             try {
-                mines = Integer.parseInt(input);
+                int mines = Integer.parseInt(input);
                 if (mines > 0 && mines <= maxMines) return mines;
             } catch (Exception ignored) {}
-            System.out.println("Invalid mine count. Try again.");
+            notificationService.sendMessage(INVALID_MINE_COUNT);
         }
     }
 
     public String promptMove() {
-        System.out.print("Select a square to reveal (e.g. A1): ");
+        notificationService.sendMessageInSameLine(PROMPT_MOVE);
         return scanner.nextLine().toUpperCase().trim();
+    }
+
+    public void waitForPlayAgain() {
+        scanner.nextLine();
     }
 }

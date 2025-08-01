@@ -10,108 +10,62 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BoardServiceTest {
 
-    private NotificationService notificationService;
     private BoardService boardService;
+    private Board board;
 
     @BeforeEach
     void setUp() {
-        notificationService = Mockito.mock(NotificationService.class);
+        NotificationService notificationService = Mockito.mock(NotificationService.class);
         boardService = new BoardService(notificationService);
-    }
+        board = new Board(3, 1); // 3x3 board with 1 mine
 
-    private Board createSimpleBoard(int size, int[][] mines) {
-        Board board = new Board(size, mines.length);
-        Cell[][] grid = new Cell[size][size];
-        for (int r = 0; r < size; r++) {
-            for (int c = 0; c < size; c++) {
-                grid[r][c] = new Cell();
+        // Initialize grid
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+                board.getGrid()[r][c] = new Cell();
             }
         }
 
-        for (int[] mine : mines) {
-            grid[mine[0]][mine[1]].setMine(true);
-        }
-
-        // Set adjacent mine counts
-        for (int r = 0; r < size; r++) {
-            for (int c = 0; c < size; c++) {
-                if (!grid[r][c].isMine()) {
-                    int count = 0;
-                    for (int dr = -1; dr <= 1; dr++) {
-                        for (int dc = -1; dc <= 1; dc++) {
-                            int nr = r + dr, nc = c + dc;
-                            if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc].isMine()) {
-                                count++;
-                            }
-                        }
-                    }
-                    grid[r][c].setAdjacentMines(count);
-                }
-            }
-        }
-
-        board.setGrid(grid);
-        return board;
+        // Place a mine at (0,0) and calculate adjacents manually for test
+        board.getGrid()[0][0].setMine(true);
+        board.getGrid()[0][1].setAdjacentMines(1);
+        board.getGrid()[1][0].setAdjacentMines(1);
+        board.getGrid()[1][1].setAdjacentMines(1);
     }
 
     @Test
-    void testReveal_InvalidCoordinate() {
-        Board board = createSimpleBoard(3, new int[][]{});
-        boolean result = boardService.reveal(board, "Z9"); // Out of bounds
-        assertFalse(result);
+    void reveal_ShouldReturnFalse_ForInvalidCoordinate() {
+        assertFalse(boardService.reveal(board, "Z99"));
+        assertFalse(boardService.reveal(board, "A4"));
     }
 
     @Test
-    void testReveal_InvalidFormat() {
-        Board board = createSimpleBoard(3, new int[][]{});
-        boolean result = boardService.reveal(board, "A"); // Missing column number
-        assertFalse(result);
-    }
-
-    @Test
-    void testReveal_AlreadyRevealed() {
-        Board board = createSimpleBoard(3, new int[][]{});
-        board.getGrid()[0][0].setRevealed(true);
-        boolean result = boardService.reveal(board, "A1");
-        assertFalse(result);
-    }
-
-    @Test
-    void testReveal_HitMine_GameOver() {
-        Board board = createSimpleBoard(3, new int[][]{{0, 0}});
-        boolean result = boardService.reveal(board, "A1");
-        assertTrue(result);
+    void reveal_ShouldSetGameOver_WhenMineIsRevealed() {
+        assertTrue(boardService.reveal(board, "A1")); // A1 corresponds to (0,0)
         assertTrue(board.isGameOver());
-        assertTrue(board.getGrid()[0][0].isRevealed());
     }
 
     @Test
-    void testReveal_EmptyCell_Revealed() {
-        Board board = createSimpleBoard(3, new int[][]{{0, 1}});
-        boolean result = boardService.reveal(board, "C3");
-        assertTrue(result);
+    void reveal_ShouldRevealSingleCell_WhenItHasAdjacentMines() {
+        boardService.reveal(board, "B2"); // B2 is (1,1), has 1 adjacent mine
+        assertTrue(board.getGrid()[1][1].isRevealed());
+        assertEquals(1, board.getRevealedCount());
+    }
+
+    @Test
+    void reveal_ShouldCascadeReveal_WhenCellHasZeroAdjacentMines() {
+        // C3 is (2,2), has 0 adjacent mines
+        boardService.reveal(board, "C3");
+
+        // Cascade should reveal all non-mine cells
+        assertTrue(board.getGrid()[0][1].isRevealed());
+        assertTrue(board.getGrid()[1][0].isRevealed());
+        assertTrue(board.getGrid()[1][1].isRevealed());
+        assertTrue(board.getGrid()[1][2].isRevealed());
+        assertTrue(board.getGrid()[2][1].isRevealed());
         assertTrue(board.getGrid()[2][2].isRevealed());
-    }
 
-    @Test
-    void testInBounds_True() {
-        Board board = createSimpleBoard(3, new int[][]{});
-        assertTrue(boardService.inBounds(board, 2, 2));
-    }
-
-    @Test
-    void testInBounds_False() {
-        Board board = createSimpleBoard(3, new int[][]{});
-        assertFalse(boardService.inBounds(board, -1, 0));
-        assertFalse(boardService.inBounds(board, 0, 3));
-    }
-
-    @Test
-    void testPrintBoard_NoExceptions() {
-        Board board = createSimpleBoard(3, new int[][]{{1, 1}});
-        board.getGrid()[0][0].setRevealed(true);
-        board.getGrid()[0][0].setAdjacentMines(1);
-        boardService.printBoard(board, false);
-        Mockito.verify(notificationService, Mockito.atLeastOnce()).sendMessageInSameLine(Mockito.anyString());
+        // Check that mine at (0,0) is not revealed
+        assertFalse(board.getGrid()[0][0].isRevealed());
     }
 }

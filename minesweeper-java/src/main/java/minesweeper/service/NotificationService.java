@@ -1,11 +1,20 @@
 package minesweeper.service;
 
+import java.io.PrintStream;
+
 public class NotificationService {
 
-    public void sendMessageInSameLine(String value){
-        System.out.print(value);
+    private final PrintStream out;
+
+    public NotificationService(PrintStream out) {
+        this.out = out;
     }
-    public void sendMessage(String value){
-        System.out.println(value);
+
+    public void sendMessageInSameLine(String value) {
+        out.print(value);
+    }
+
+    public void sendMessage(String value) {
+        out.println(value);
     }
 }

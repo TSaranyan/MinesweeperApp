@@ -1,65 +1,47 @@
 package minesweeper.service;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.io.*;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.mockito.Mockito;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.Scanner;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PlayerServiceTest {
 
-    private final InputStream originalIn = System.in;
-    private ByteArrayInputStream testIn;
-
-    private void provideInput(String data) {
-        testIn = new ByteArrayInputStream(data.getBytes());
-        System.setIn(testIn);
-    }
-
-    @AfterEach
-    void restoreSystemInput() {
-        System.setIn(originalIn);
-    }
-
     @Test
-    void testPromptGridSize_ValidInput() {
-        provideInput("4");
-        PlayerService playerService = new PlayerService();
+    void promptGridSize_ShouldReturnValidSize_AfterInvalidAttempts() {
+        String simulatedInput = "1\n30\ninvalid\n4\n";
+        Scanner scanner = new Scanner(simulatedInput);
+        NotificationService notificationService = new NotificationService(new PrintStream(new ByteArrayOutputStream()));
+
+        PlayerService playerService = new PlayerService(scanner, notificationService);
         int size = playerService.promptGridSize();
+
         assertEquals(4, size);
     }
 
     @Test
-    void testPromptGridSize_InvalidThenValid() {
-        provideInput("abc1n5");
-        PlayerService playerService = new PlayerService();
-        int size = playerService.promptGridSize();
-        assertEquals(5, size);
+    void promptMines_ShouldReturnValidMineCount() {
+        String simulatedInput = "0\n11\ninvalid\n5\n"; // Max for 10x10 is 35
+        Scanner scanner = new Scanner(simulatedInput);
+        NotificationService notificationService = new NotificationService(new PrintStream(new ByteArrayOutputStream()));
+
+        PlayerService playerService = new PlayerService(scanner, notificationService);
+        int mines = playerService.promptMines(10);
+
+        assertEquals(5, mines);
     }
 
     @Test
-    void testPromptMines_ValidInput() {
-        provideInput("3");
-        PlayerService playerService = new PlayerService();
-        int mines = playerService.promptMines(4);
-        assertEquals(3, mines);
-    }
+    void promptMove_ShouldReturnUppercasedTrimmedInput() {
+        String simulatedInput = " a1 \n";
+        Scanner scanner = new Scanner(simulatedInput);
+        NotificationService notificationService = Mockito.mock(NotificationService.class);
 
-    @Test
-    void testPromptMines_InvalidThenValid() {
-        provideInput("0102");
-        PlayerService playerService = new PlayerService();
-        int mines = playerService.promptMines(3);
-        assertEquals(2, mines);
-    }
-
-    @Test
-    void testPromptMove() {
-        provideInput(" a1 ");
-        PlayerService playerService = new PlayerService();
+        PlayerService playerService = new PlayerService(scanner, notificationService);
         String move = playerService.promptMove();
+
         assertEquals("A1", move);
     }
 }
